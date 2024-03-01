@@ -11,7 +11,7 @@ class Interaction:
     def __init__(self, interaction_type: constants.InteractionType, interaction_value: str, control: uia.Control):
         """
 
-        :param interaction_type: the type of the interaction, e.g., if the interaction is a left click if it involes
+        :param interaction_type: the type of the interaction, e.g., if the interaction is a left click if it involves
         the keyboard.
         :param interaction_value: further information about the interaction (e.g., text that was typed)
         :param control: the control directly involved with the interaction.

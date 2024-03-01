@@ -1,26 +1,14 @@
 from enum import Enum
 
 
-class MouseInteractionType(Enum):
-    """
-    Represents the ways the user can interact with the user via the mouse.
-    """
-    MOUSE_LEFT = "left mouse button"
-    MOUSE_RIGHT = "right mouse button"
-    MOUSE_MIDDLE = "middle mouse button"
-
-
-class KeyboardInteractionType(Enum):
-    """
-    Represents the ways the user can interact with the user via the keyboard.
-    """
-    ENTER_PRESSED = "enter key pressed"
-    TYPING = "typing"
-
-
 class InteractionType(Enum):
     """
-    Represents the ways the user can interact with the user.
+    Represents the significant ways the user can interact with the computer at a high level.
     """
-    MOUSE = MouseInteractionType
-    KEYBOARD = KeyboardInteractionType
+    # Mouse interactions
+    MOUSE_PRESSED = "mouse pressed"
+    MOUSE_SCROLLED = "mouse scrolled"
+
+    # Keyboard interactions
+    ENTER_PRESSED = "enter key pressed"
+    KEYBOARD_TYPING = "typing"
