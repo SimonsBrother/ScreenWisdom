@@ -13,7 +13,8 @@ class Interaction:
 
         :param interaction_type: the type of the interaction, e.g., if the interaction is a left click if it involves
         the keyboard.
-        :param interaction_value: further information about the interaction (e.g., text that was typed)
+        :param interaction_value: further information about the interaction (e.g., text that was typed, or the mouse
+        button that pressed)
         :param control: the control directly involved with the interaction.
         """
         self.interaction_type = interaction_type
@@ -74,7 +75,7 @@ class MouseRecorder:
     """
     def __init__(self):
         """ Starts the recording. """
-        self.buffer = []
+        self.recording = []
         self.listener = self._build_mouse_listener()
         self.listener.start()
 
@@ -86,11 +87,11 @@ class MouseRecorder:
 
         def on_click(x, y, button, pressed):
             action = "pressed" if pressed else "released"
-            self.buffer.append(f"mouse {action} at ({x}, {y})")
+            self.recording.append(f"mouse {action} at ({x}, {y})")
 
         def on_scroll(x, y, dx, dy):
             direction = "down" if dy < 0 else "up"
-            self.buffer.append(f"mouse scrolled {direction} at ({x}, {y})")
+            self.recording.append(f"mouse scrolled {direction} at ({x}, {y})")
 
         listener = mouse.Listener(on_click=on_click, on_scroll=on_scroll)
 
@@ -103,7 +104,7 @@ class KeyboardRecorder:
     """
     def __init__(self):
         """ Starts the recording. """
-        self.buffer = []
+        self.recording = []
         self.listener = self._build_keyboard_listener()
         self.listener.start()
 
@@ -113,7 +114,7 @@ class KeyboardRecorder:
         :return: the keyboard Listener.
         """
         def on_press(key: keyboard.KeyCode):
-            self.buffer.append(key)
+            self.recording.append(key)
 
         listener = keyboard.Listener(on_press=on_press)
 
@@ -126,4 +127,4 @@ if __name__ == "__main__":
 
     while True:
         sleep(1)
-        print(kb_recorder.buffer)
+        print(kb_recorder.recording)
