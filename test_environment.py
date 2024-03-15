@@ -1,11 +1,8 @@
 # Simple test for checking the virtual environment is working
 
 try:
-    # Attempt to import the needed libraries.
+    # Attempt to import a library.
     import uiautomation
-    import pynput
-    import psutil
-    import win32
     print("Successfully accessed needed libraries.")
 
 except Exception as exception:

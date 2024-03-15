@@ -1,0 +1,58 @@
+<mxfile host="Electron" modified="2024-03-15T02:05:48.563Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.0.3 Chrome/114.0.5735.289 Electron/25.8.4 Safari/537.36" etag="iu1_8EMlBlNPrjGwYuOy" version="22.0.3" type="device">
+  <diagram name="Page-1" id="ubDXstVEy7a0KQwrbA6t">
+    <mxGraphModel dx="1276" dy="606" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="GTU_rNjX-6D29jfX396c-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-1" target="GTU_rNjX-6D29jfX396c-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-1" value="MouseRecorder" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="130" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-2" target="GTU_rNjX-6D29jfX396c-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-2" value="KeyboardRecorder" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="130" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-3" target="GTU_rNjX-6D29jfX396c-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-3" value="MouseClick" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="40" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-4" target="GTU_rNjX-6D29jfX396c-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-4" value="MouseScroll" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="40" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-7" target="GTU_rNjX-6D29jfX396c-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-7" value="KeyRelease" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="315" y="40" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="GTU_rNjX-6D29jfX396c-9" target="GTU_rNjX-6D29jfX396c-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-9" value="Interaction" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="195" y="230" width="135" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-10" value="Stores and has methods for handling raw events." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="430" y="145" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-11" value="Dataclasses for raw events.&lt;br&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="475" y="45" width="170" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-15" value="Recordings can be parsed into Interaction objects, which represent a &lt;br&gt;high-level version of a set of connected actions (such as typing).&lt;br&gt;Interaction objects are structured in such a way that they can be easily&lt;br&gt;converted to English by passing values into a formatted string." style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="230" width="400" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="GTU_rNjX-6D29jfX396c-16" value="LLM" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="202.5" y="370" width="120" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
