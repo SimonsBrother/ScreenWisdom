@@ -8,7 +8,7 @@ class InteractionType(Enum):
     # Mouse interactions
     MOUSE_PRESSED = "mouse pressed"
     MOUSE_SCROLLED = "mouse scrolled"
-    # todo: drag
+    MOUSE_DRAGGED = "mouse dragged"
 
     # Keyboard interactions
     ENTER_PRESSED = "enter key pressed"
