@@ -4,17 +4,20 @@ Defines classes involved in recording input.
 from time import time
 from dataclasses import dataclass, field
 
+import psutil
 import uiautomation as uia
+import win32process
 from pynput import mouse, keyboard
 
 import screenwisdom.core.constants as constants
 
 
+# TODO replace timestamp with "InputEvent" that also has a context attribute
 @dataclass
 class Timestamp:
     """ Dataclass for storing a timestamp to be used by other classes. Currently, timestamp is just seconds since epoch.
     Made separate in case format of timestamp is changed. Knowing precisely when an event occurred may be useful. """
-    timestamp: float
+    timestamp: float = field(init=False, default=time())
 
 
 @dataclass
@@ -44,13 +47,22 @@ class Context:
         # Extractable data
         self.closest_ctrl_name = None
         self.closest_ctrl_class_name = None
-
-        # TODO: determine the current application
+        self.window_title = None
+        self.process_name = None
 
         # It is possible that extracting so much data will result in performance issues. Something to be aware of.
         try:
+            # Control analysis
             self.closest_ctrl_name = self.get_relevant_control_attribute(self.control, "Name")
             self.closest_ctrl_class_name = self.get_relevant_control_attribute(self.control, "ClassName")
+
+            # Window title
+            window_handle = uia.WindowFromPoint(*uia.GetCursorPos())
+            self.window_title = uia.GetWindowText(window_handle)
+
+            # Get current process name. Start by getting PID from window handle, which is the last element.
+            pid = win32process.GetWindowThreadProcessId(window_handle)[-1]
+            self.process_name = psutil.Process(pid).name()
         except:
             pass  # It is possible that the control was deleted, or the application is closed, as data is extracted,
             # which may cause an exception.
@@ -96,7 +108,11 @@ class Context:
         return None
 
     def __repr__(self):
-        ...  # TODO: make repr, after getting all the required data for context like application
+        return (f"Context(control={self.control}, "
+                f"closest_ctrl_name={self.closest_ctrl_name}, "
+                f"closest_ctrl_class_name={self.closest_ctrl_class_name}, "
+                f"window_title='{self.window_title}', "
+                f"process_name='{self.process_name}')")
 
 
 @dataclass
@@ -111,12 +127,10 @@ class MouseClick(Timestamp, MouseCoordinates):
     context: Context = field(init=False)
 
     def __post_init__(self):
-        # Get control from where the mouse was clicked.
-        self.context = Context(uia.ControlFromPoint(self.x, self.y))
-
-    def __repr__(self):
-        action = "pressed" if self.pressed else "released"
-        return f"{self.button} button on mouse {action} at {self.coords}"
+        super().__post_init__()
+        with uia.UIAutomationInitializerInThread():
+            # Get control from where the mouse was clicked.
+            self.context = Context(uia.ControlFromPoint(self.x, self.y))
 
 
 @dataclass
@@ -131,17 +145,16 @@ class MouseScroll(Timestamp, MouseCoordinates):
     context: Context = field(init=False)
 
     def __post_init__(self):
-        # Get control from where the mouse was clicked.
-        self.context = Context(uia.ControlFromPoint(self.x, self.y))
+        super().__post_init__()
+        with uia.UIAutomationInitializerInThread():
+            # Get control from where the mouse was clicked.
+            self.context = Context(uia.ControlFromPoint(self.x, self.y))
 
     def vertical_direction(self):
         return "down" if self.dy < 0 else "up"
 
     def horizontal_direction(self):
         return "left" if self.dx < 0 else "right"
-
-    def __repr__(self):
-        return f"mouse scrolled ({self.dx}, {self.dy}) at {self.coords}"
 
 
 @dataclass
@@ -152,8 +165,22 @@ class KeyRelease(Timestamp):
     context: Context = field(init=False)
 
     def __post_init__(self):
-        # Get control from the focused control
-        self.context = Context(uia.GetFocusedControl())
+        with uia.UIAutomationInitializerInThread():
+            # Get control from the focused control
+            self.context = Context(uia.GetFocusedControl())
+
+
+@dataclass
+class KeyPress(Timestamp):
+    """ Records a single key being pressed or held.
+        :var key: the key pressed """
+    key: keyboard.KeyCode
+    context: Context = field(init=False)
+
+    def __post_init__(self):
+        with uia.UIAutomationInitializerInThread():
+            # Get control from the focused control
+            self.context = Context(uia.GetFocusedControl())
 
 
 class InputRecorder:
@@ -210,10 +237,10 @@ class MouseRecorder(InputRecorder):
 
         def on_click(x, y, button, pressed):
             # Add a MouseClick object to the recording to indicate the event.
-            self.recording.append(MouseClick(x, y, time(), button, pressed))
+            self.recording.append(MouseClick(x, y, button, pressed))
 
         def on_scroll(x, y, dx, dy):
-            self.recording.append(MouseScroll(x, y, time(), dx, dy))
+            self.recording.append(MouseScroll(x, y, dx, dy))
 
         listener = mouse.Listener(on_click=on_click, on_scroll=on_scroll)
 
@@ -237,47 +264,32 @@ class KeyboardRecorder(InputRecorder):
         :return: the keyboard Listener.
         """
 
-        def record_key(key: keyboard.KeyCode):
-            self.recording.append(KeyRelease(time(), key))
+        def record_key_press(key: keyboard.KeyCode):
+            self.recording.append(KeyPress(key))
 
-        listener = keyboard.Listener(on_release=record_key)
+        def record_key_release(key: keyboard.KeyCode):
+            self.recording.append(KeyRelease(key))
+
+        listener = keyboard.Listener(on_press=record_key_press, on_release=record_key_release)
 
         return listener
 
 
+# TODO: Document
 class Interaction:
     """
-    Represents part of a recording, so it can be turned into coherent english.
+    Represents part of a recording at a high level, so it can be turned into coherent english.
     """
-
-    def __init__(self, interaction_type: constants.InteractionType, interaction_value: str):
-        """
-        Creates the interaction, and gets further information regarding the context of the interaction.
-
-        :param interaction_type: the type of the interaction, e.g., if the interaction is a left click if it involves
-         the keyboard.
-        :param interaction_value: further information about the interaction (e.g., text that was typed, or the mouse
-         button that was pressed)
-        """
-        self.interaction_type = interaction_type
-        self.interaction_value = interaction_value
-        # TODO: add other significant data about interaction, such as the application being used
-
-    def __repr__(self):
-        ...  # TODO: rewrite repr
-
-
-def interactions_from_recording(rec: InputRecorder) -> [Interaction]:
-    """
-    Pops all events in the recording of an InputRecorder, and analyses it to create meaningful Interaction objects.
-    :param rec: an InputRecorder to analyse the recording of.
-    :return: a list of interactions representing the recording.
-    """
-    ...
+    interaction_type: constants.InteractionType
+    interaction_specific_data: dict
+    application_title: str
+    process_name: str
+    relevant_controls: dict
+    inputs: list
 
 
 if __name__ == "__main__":
-    recorder = KeyboardRecorder()
+    recorder = MouseRecorder()
     from time import sleep
 
     while True:
