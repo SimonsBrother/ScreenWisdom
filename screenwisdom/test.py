@@ -1,3 +1,15 @@
-import uiautomation as uia
+from dataclasses import dataclass, field
 
-print(uia.GetFocusedControl())
+
+@dataclass
+class A:
+    def __post_init__(self):
+        print("A")
+
+@dataclass
+class B(A):
+    def __post_init__(self):
+        super().__post_init__()
+        print("B")
+
+B()

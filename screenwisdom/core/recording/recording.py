@@ -9,16 +9,6 @@ import uiautomation as uia
 import win32process
 from pynput import mouse, keyboard
 
-import screenwisdom.core.constants as constants
-
-
-# TODO replace timestamp with "InputEvent" that also has a context attribute
-@dataclass
-class Timestamp:
-    """ Dataclass for storing a timestamp to be used by other classes. Currently, timestamp is just seconds since epoch.
-    Made separate in case format of timestamp is changed. Knowing precisely when an event occurred may be useful. """
-    timestamp: float = field(init=False, default=time())
-
 
 @dataclass
 class MouseCoordinates:
@@ -116,7 +106,17 @@ class Context:
 
 
 @dataclass
-class MouseClick(Timestamp, MouseCoordinates):
+class InputEvent:
+    """ Defines required information about all input events, such as a mouse click or a key press.
+        :var timestamp: seconds since epoch the event occurred. IMPORTANT: not assigned automatically, this is too slow.
+        :var context: a Context object - not set by this class, must be set by something extending this class.
+    """
+    timestamp: float
+    context: Context = field(init=False)
+
+
+@dataclass
+class MouseClick(InputEvent, MouseCoordinates):
     """Class for storing details about a mouse click event. Requires a timestamp and mouse coordinates.
         :var button: the button pressed on the mouse, either Button.left, Button.right, or Button.middle
         :var pressed: True if pressed, False if released
@@ -124,7 +124,6 @@ class MouseClick(Timestamp, MouseCoordinates):
     """
     button: mouse.Button
     pressed: bool
-    context: Context = field(init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -134,7 +133,7 @@ class MouseClick(Timestamp, MouseCoordinates):
 
 
 @dataclass
-class MouseScroll(Timestamp, MouseCoordinates):
+class MouseScroll(InputEvent, MouseCoordinates):
     """ Class for storing details about a mouse scroll event.
         :var dx: Horizontal scroll
         :var dy: Vertical scroll
@@ -142,7 +141,6 @@ class MouseScroll(Timestamp, MouseCoordinates):
     """
     dx: int  # Horizontal scroll
     dy: int  # Vertical scroll
-    context: Context = field(init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -158,11 +156,10 @@ class MouseScroll(Timestamp, MouseCoordinates):
 
 
 @dataclass
-class KeyRelease(Timestamp):
+class KeyRelease(InputEvent):
     """ Records a single key being released.
         :var key: the key pressed """
     key: keyboard.KeyCode
-    context: Context = field(init=False)
 
     def __post_init__(self):
         with uia.UIAutomationInitializerInThread():
@@ -171,11 +168,10 @@ class KeyRelease(Timestamp):
 
 
 @dataclass
-class KeyPress(Timestamp):
+class KeyPress(InputEvent):
     """ Records a single key being pressed or held.
         :var key: the key pressed """
     key: keyboard.KeyCode
-    context: Context = field(init=False)
 
     def __post_init__(self):
         with uia.UIAutomationInitializerInThread():
@@ -209,8 +205,9 @@ class InputRecorder:
     def pop_recording(self):
         """
         Clears the recording and returns its contents. May be useful when repeatedly getting input from recorder, and
-         you want to ignore previous events.
-        Credit: Hugh Bothwell's answer from https://stackoverflow.com/questions/21608681/popping-all-items-from-python-list
+        you want to ignore previous events.
+         Credit: Hugh Bothwell's answer
+         from https://stackoverflow.com/questions/21608681/popping-all-items-from-python-list
         :return: the contents of recording, since the last pop.
         """
         # Assign result to the recording list, and the recording list attribute to a new blank list. Return result.
@@ -237,10 +234,10 @@ class MouseRecorder(InputRecorder):
 
         def on_click(x, y, button, pressed):
             # Add a MouseClick object to the recording to indicate the event.
-            self.recording.append(MouseClick(x, y, button, pressed))
+            self.recording.append(MouseClick(x, y, time(), button, pressed))
 
         def on_scroll(x, y, dx, dy):
-            self.recording.append(MouseScroll(x, y, dx, dy))
+            self.recording.append(MouseScroll(x, y, time(), dx, dy))
 
         listener = mouse.Listener(on_click=on_click, on_scroll=on_scroll)
 
@@ -265,27 +262,14 @@ class KeyboardRecorder(InputRecorder):
         """
 
         def record_key_press(key: keyboard.KeyCode):
-            self.recording.append(KeyPress(key))
+            self.recording.append(KeyPress(time(), key))
 
         def record_key_release(key: keyboard.KeyCode):
-            self.recording.append(KeyRelease(key))
+            self.recording.append(KeyRelease(time(), key))
 
         listener = keyboard.Listener(on_press=record_key_press, on_release=record_key_release)
 
         return listener
-
-
-# TODO: Document
-class Interaction:
-    """
-    Represents part of a recording at a high level, so it can be turned into coherent english.
-    """
-    interaction_type: constants.InteractionType
-    interaction_specific_data: dict
-    application_title: str
-    process_name: str
-    relevant_controls: dict
-    inputs: list
 
 
 if __name__ == "__main__":
@@ -294,4 +278,9 @@ if __name__ == "__main__":
 
     while True:
         sleep(1)
-        print(recorder.recording)
+        try:
+            print(recorder.recording)
+            # TODO: an error may occur if you left click the pycharm editor and then right click quickly
+            # Error: (-2147220991, 'An event was unable to invoke any of the subscribers', (None, None, None, 0, None))
+        except Exception as e:
+            print(f"Error: {e}")
