@@ -33,7 +33,7 @@ class Interaction:
         self.interaction_end_timestamp = self.input_events_associated[-1].timestamp
 
 
-def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Interaction]:
+def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> list[Interaction]:
     """
     Analyses a recording of InputEvents related to the mouse to create meaningful Interaction objects.
     :param recording: a recording of InputEvents.
@@ -70,7 +70,8 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
                 # Check for a mouse click event that has the same button, released this time.
                 if (isinstance(subseq_event, rec.MouseClick) and subseq_event.button == event.button
                         and not subseq_event.pressed):
-                    # Detect drag by checking if the mouse coordinates are different. Otherwise, event is a click
+                    # Detect drag by checking if the mouse coordinates are different. Otherwise, event is a click.
+
                     # TODO: Comparison may need to be "fuzzy" if mouse moves very slightly between clicks.
                     if event.coords != subseq_event.coords:
                         interactions.append(Interaction(InteractionType.MOUSE_DRAGGED, [event, subseq_event]))
@@ -155,7 +156,7 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
     return interactions
 
 
-def interactions_from_keyboard_recording(recording: list[rec.InputEvent]) -> [Interaction]:
+def interactions_from_keyboard_recording(recording: list[rec.InputEvent]) -> list[Interaction]:
     """
     Analyses a recording of InputEvents related to the keyboard to create meaningful Interaction objects.
     :param recording: a recording of InputEvents.
@@ -358,13 +359,13 @@ def translate_interaction(interaction: Interaction):
             return f"The user is typing: {''.join([event.key.char for event in events])}"
 
 
-r = rec.MouseRecorder()
-r2 = rec.KeyboardRecorder()
-input()
-i = interactions_from_mouse_recording(r.recording)
-i2 = interactions_from_keyboard_recording(r2.recording)
-for t in i:
-    print(translate_interaction(t))
-
-for t in i2:
-    print(translate_interaction(t))
+if __name__ == '__main__':
+    r = rec.MouseRecorder()
+    r2 = rec.KeyboardRecorder()
+    input()
+    i = interactions_from_mouse_recording(r.recording)
+    i2 = interactions_from_keyboard_recording(r2.recording)
+    for t in i:
+        print(translate_interaction(t))
+    for t in i2:
+        print(translate_interaction(t))

@@ -125,7 +125,7 @@ class MouseClick(InputEvent, MouseCoordinates):
         :var x: x coordinate of the click.
         :var y: y coordinate of the click.
         :var timestamp: timestamp of the click.
-        :var button: the button pressed on the mouse, either Button.left, Button.right, or Button.middle
+        :var button: the button pressed on the mouse, should either be Button.left, Button.middle, Button.right
         :var pressed: True if pressed, False if released
     """
     button: mouse.Button
