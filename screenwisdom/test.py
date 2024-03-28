@@ -1,15 +1,9 @@
-from dataclasses import dataclass, field
-
-
-@dataclass
-class A:
-    def __post_init__(self):
-        print("A")
-
-@dataclass
-class B(A):
-    def __post_init__(self):
-        super().__post_init__()
-        print("B")
-
-B()
+import uiautomation as uia
+from time import sleep
+print(uia.GetRootControl())
+sleep(2)
+while True:
+    print(uia.ControlFromCursor())
+    print(uia.ControlFromCursor().GetParentControl())
+    print(uia.ControlFromCursor().GetParentControl().GetParentControl())
+    sleep(2)

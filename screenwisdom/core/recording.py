@@ -8,6 +8,7 @@ import psutil
 import uiautomation as uia
 import win32process
 from pynput import mouse, keyboard
+from win32gui import GetForegroundWindow
 
 
 @dataclass
@@ -24,11 +25,14 @@ class MouseCoordinates:
 
     def __post_init__(self):
         """ Initialise the coords attribute, based on the x and y attribute. """
+        if self.x < 0 or self.y < 0:
+            raise ValueError("x and y cannot be negative.")
+
         self.coords = (self.x, self.y)
 
 
 class Context:
-    """ Class that stores a details surrounding an interaction, such as a related uiautomation Control or the current
+    """ Class that stores a details surrounding an input event, such as a related uiautomation Control or the current
         application. The relevant information is retrieved immediately, should any be unavailable in the future. """
 
     def __init__(self, control):
@@ -47,7 +51,7 @@ class Context:
             self.closest_ctrl_class_name = self.get_relevant_control_attribute(self.control, "ClassName")
 
             # Window title
-            window_handle = uia.WindowFromPoint(*uia.GetCursorPos())
+            window_handle = GetForegroundWindow()
             self.window_title = uia.GetWindowText(window_handle)
 
             # Get current process name. Start by getting PID from window handle, which is the last element.
@@ -118,9 +122,11 @@ class InputEvent:
 @dataclass
 class MouseClick(InputEvent, MouseCoordinates):
     """Class for storing details about a mouse click event. Requires a timestamp and mouse coordinates.
+        :var x: x coordinate of the click.
+        :var y: y coordinate of the click.
+        :var timestamp: timestamp of the click.
         :var button: the button pressed on the mouse, either Button.left, Button.right, or Button.middle
         :var pressed: True if pressed, False if released
-        :var context: a Context object storing data about the context.
     """
     button: mouse.Button
     pressed: bool
@@ -135,9 +141,11 @@ class MouseClick(InputEvent, MouseCoordinates):
 @dataclass
 class MouseScroll(InputEvent, MouseCoordinates):
     """ Class for storing details about a mouse scroll event.
+        :var x: x coordinate of the scroll.
+        :var y: y coordinate of the scroll.
+        :var timestamp: timestamp of the scroll.
         :var dx: Horizontal scroll
         :var dy: Vertical scroll
-        :var context: a Context object storing data about the context.
     """
     dx: int  # Horizontal scroll
     dy: int  # Vertical scroll
@@ -158,6 +166,7 @@ class MouseScroll(InputEvent, MouseCoordinates):
 @dataclass
 class KeyRelease(InputEvent):
     """ Records a single key being released.
+        :var timestamp: the timestamp the key was released at.
         :var key: the key pressed """
     key: keyboard.KeyCode
 
@@ -170,7 +179,9 @@ class KeyRelease(InputEvent):
 @dataclass
 class KeyPress(InputEvent):
     """ Records a single key being pressed or held.
-        :var key: the key pressed """
+        :var timestamp: the timestamp the key was pressed at.
+        :var key: the key pressed.
+    """
     key: keyboard.KeyCode
 
     def __post_init__(self):
@@ -273,14 +284,15 @@ class KeyboardRecorder(InputRecorder):
 
 
 if __name__ == "__main__":
-    recorder = MouseRecorder()
+    recorder = KeyboardRecorder()
     from time import sleep
 
     while True:
         sleep(1)
         try:
             print(recorder.recording)
-            # TODO: an error may occur if you left click the pycharm editor and then right click quickly
+            # TODO: an error may occur if you left click the pycharm editor and then right click quickly,
+            #  this may be to do with threading
             # Error: (-2147220991, 'An event was unable to invoke any of the subscribers', (None, None, None, 0, None))
         except Exception as e:
             print(f"Error: {e}")

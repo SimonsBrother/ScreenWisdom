@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-import screenwisdom.core.recording.recording as rec
+import screenwisdom.core.recording as rec
 from screenwisdom.core.constants import InteractionType, MOUSE_MAX_DOUBLE_CLICK_DELAY_SECONDS, \
     KEYBOARD_MAX_TYPING_DELAY_SECONDS
 
@@ -79,7 +79,7 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
                         related_click_events.append([event, subseq_event])
                     break
             # Mouse hasn't been released yet.
-            # TODO return trailing events
+            # TODO handle trailing events
 
         """ MOUSE SCROLLS
         A scroll interaction should consist of all the scroll events in a single direction over the
@@ -94,8 +94,10 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
                 # Add scroll event to the current sequence
                 current_scroll_sequence.append(event)
             else:
-                # Create complete interaction
-                interactions.append(Interaction(InteractionType.MOUSE_SCROLLED, current_scroll_sequence))
+                # Check if the current scroll sequence is empty. This occurs on the first iteration involving scrolling.
+                if len(current_scroll_sequence) != 0:
+                    # Create complete interaction
+                    interactions.append(Interaction(InteractionType.MOUSE_SCROLLED, current_scroll_sequence))
                 # Start new sequence
                 current_scroll_sequence = [event]
                 previous_scroll_control = event.context.control
@@ -116,14 +118,22 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
 
         # Check previous click if not at start
         if i > 0:
-            prior_click_time_difference = related_click_events[i - 1][0].timestamp - click_event_group[0].timestamp
-            if prior_click_time_difference <= MOUSE_MAX_DOUBLE_CLICK_DELAY_SECONDS:
+            prior_click_press_event = related_click_events[i - 1][0]
+            prior_click_time_difference = prior_click_press_event.timestamp - click_event_group[0].timestamp
+
+            same_button = prior_click_press_event.button == click_event_group[0].button
+
+            if prior_click_time_difference <= MOUSE_MAX_DOUBLE_CLICK_DELAY_SECONDS and same_button:
                 single_click = False
 
         # Check next click if not at end
         if i < len(related_click_events) - 1:
-            next_click_time_difference = related_click_events[i + 1][0].timestamp - click_event_group[0].timestamp
-            if next_click_time_difference <= MOUSE_MAX_DOUBLE_CLICK_DELAY_SECONDS:
+            next_click_press_event = related_click_events[i + 1][0]
+            next_click_time_difference = next_click_press_event.timestamp - click_event_group[0].timestamp
+
+            same_button = next_click_press_event.button == click_event_group[0].button
+
+            if next_click_time_difference <= MOUSE_MAX_DOUBLE_CLICK_DELAY_SECONDS and same_button:
                 single_click = False
 
         if single_click:
@@ -138,7 +148,7 @@ def interactions_from_mouse_recording(recording: list[rec.InputEvent]) -> [Inter
 
     # What remains are double clicks. There should therefore be an even number of clicks at this point. As everything
     # should be chronological, we can just splice in twos.
-    for i in range(0, len(related_click_events), 2):
+    for i in range(0, len(related_click_events) - 1, 2):
         interactions.append(Interaction(InteractionType.MOUSE_DOUBLE_CLICKED,
                                         related_click_events[i] + related_click_events[i+1]))
 
@@ -168,30 +178,26 @@ def interactions_from_keyboard_recording(recording: list[rec.InputEvent]) -> [In
         is being held.
         """
         if isinstance(event, rec.KeyPress):
-            # A key was pressed. Find the subsequent event the same key is released from subsequent events.
-            for j, subseq_event in enumerate(recording[i:]):
-                # recording[i:] will include "event", which is bad because it may get turned into None later.
-                # Could do recording[i+1:] instead, however this means I don't have to check the length of the recording
-                # and use a big if statement. This has the same effect and is simpler.
-                if i == j:
-                    continue
+            # A key was pressed. Find the subsequent event the same key is released from subsequent events. Start from
+            # i+1 to avoid including "event"; however, check if we're at the end of the loop
+            if i < len(recording):
+                for j, subseq_event in enumerate(recording[i+1:]):
+                    # Check if we find the key being released
+                    if isinstance(subseq_event, rec.KeyRelease) and subseq_event.key == event.key:
+                        if key_being_held:
+                            interactions.append(Interaction(InteractionType.SINGLE_KEY_HELD, [event, subseq_event]))
+                            key_being_held = False
+                        else:
+                            related_keypress_events.append([event, subseq_event])
+                        break
 
-                # Check if we find the key being released
-                if isinstance(subseq_event, rec.KeyRelease) and subseq_event.key == event.key:
-                    if key_being_held:
-                        # Create held interaction
-                        interactions.append(Interaction(InteractionType.SINGLE_KEY_HELD, [event, subseq_event]))
-                        key_being_held = False
-                    else:
-                        related_keypress_events.append([event, subseq_event])
-
-                # Check if the event is the same key being pressed again, which would mean there was no release
-                # in between the presses - this occurs if the key is being held.
-                elif isinstance(subseq_event, rec.KeyPress) and subseq_event.key == event.key:
-                    # To avoid a key being held being seen as a key being pressed again, replace event at this index
-                    # with None.
-                    recording[j] = None
-                    key_being_held = True
+                    # Check if the event is the same key being pressed again, which would mean there was no release
+                    # in between the presses - this occurs if the key is being held.
+                    elif isinstance(subseq_event, rec.KeyPress) and subseq_event.key == event.key:
+                        # To avoid a key being held being seen as a key being pressed again, replace event at this index
+                        # with None.
+                        recording[j] = None
+                        key_being_held = True
 
     """ INDIVIDUAL KEY PRESSES AND TYPING
     Detect typing by comparing the time between key presses, which should be within some value. I tried typing very 
@@ -241,25 +247,26 @@ def interactions_from_keyboard_recording(recording: list[rec.InputEvent]) -> [In
     """
 
     typing_sequence_break_indexes = []
-    previous_control = None
+    previous_control_name = None
     for i, keypress_event_group in enumerate(related_keypress_events):
         # If at end, break
         if i == len(related_keypress_events) - 1:
             # Add final index, to include the last part of typing
-            typing_sequence_break_indexes.append(i)
+            typing_sequence_break_indexes.append(i+1)
             break
 
         next_keypress_event_group = related_keypress_events[i + 1]
         subsequent_keypress_time_difference = next_keypress_event_group[0].timestamp - keypress_event_group[0].timestamp
 
-        control_different = keypress_event_group[0].context.control != previous_control
+        # TODO temporary solution to controls being incomparable
+        control_different = keypress_event_group[0].context.closest_ctrl_name != previous_control_name
 
         # Check if time difference is greater than max allowed for typing, or if the control is different from previous
         # Note that the first iteration will add 0, because previous_control is initially None
         if subsequent_keypress_time_difference > KEYBOARD_MAX_TYPING_DELAY_SECONDS or control_different:
             typing_sequence_break_indexes.append(i)  # This is the index of the last key in the typing interaction
             if control_different:
-                previous_control = keypress_event_group[0].context.control
+                previous_control_name = keypress_event_group[0].context.closest_ctrl_name
 
     # Iterate over sequence break indexes, and splice
     for i in range(len(typing_sequence_break_indexes) - 1):
@@ -269,11 +276,12 @@ def interactions_from_keyboard_recording(recording: list[rec.InputEvent]) -> [In
 
         # Add all the InputEvents from the related keypresses within the indexes indicating typing
         for related_keypress_event in related_keypress_events[typing_starting_index:typing_ending_index]:
-            combined_press_events.extend(related_keypress_event)
+            combined_press_events.append(related_keypress_event[0])
 
         interaction = Interaction(InteractionType.KEYBOARD_TYPING, combined_press_events)
         interactions.append(interaction)
 
+    interactions.sort(key=lambda e: e.interaction_start_timestamp)
     return interactions
 
 
@@ -318,3 +326,45 @@ def group_recording(recording: list[rec.InputEvent], attribute: str, from_contex
             current_group_value = get_event_attr(event)
 
     return rec_grouped
+
+
+def translate_interaction(interaction: Interaction):
+    events = interaction.input_events_associated
+
+    match interaction.interaction_type:
+        case InteractionType.MOUSE_DRAGGED:
+            return (f"Mouse dragged from {events[0].coords} to {events[1].coords} using {events[0].button.name} mouse "
+                    f"button.")
+
+        case InteractionType.MOUSE_CLICKED:
+            return f"Mouse clicked at {events[0].coords} using {events[0].button.name} mouse button."
+
+        case InteractionType.MOUSE_DOUBLE_CLICKED:
+            return f"Mouse double clicked at {events[0].coords} using {events[0].button.name} mouse button."
+
+        case InteractionType.MOUSE_SCROLLED:
+            horizontal_scroll_total = sum([event.dx for event in events])
+            vertical_scroll_total = sum([event.dy for event in events])
+            return (f"Mouse scrolled on {events[0].context.closest_ctrl_name} vertically {vertical_scroll_total} units"
+                    f" and horizontally {horizontal_scroll_total} units.")
+
+        case InteractionType.SINGLE_KEY_PRESSED:
+            return f"Individual keyboard key pressed: {events[0].key}"
+
+        case InteractionType.SINGLE_KEY_HELD:
+            return f"Individual keyboard key held: {events[0].key}"
+
+        case InteractionType.KEYBOARD_TYPING:
+            return f"The user is typing: {''.join([event.key.char for event in events])}"
+
+
+r = rec.MouseRecorder()
+r2 = rec.KeyboardRecorder()
+input()
+i = interactions_from_mouse_recording(r.recording)
+i2 = interactions_from_keyboard_recording(r2.recording)
+for t in i:
+    print(translate_interaction(t))
+
+for t in i2:
+    print(translate_interaction(t))
